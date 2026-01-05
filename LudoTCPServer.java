@@ -80,11 +80,11 @@ public class LudoTCPServer {
             }
         }
 
-        // Antes de iniciar a primeira partida, aguardar confirmação de todos os jogadores
+        
         boolean allConfirmed = waitForAllPlayersToStart();
         if (!allConfirmed) {
             broadcast("Nem todos os jogadores confirmaram o inicio. Encerrando servidor...");
-            // Fechar conexões e sair
+            
             for (Socket client : clients) {
                 try { client.close(); } catch (Exception e) { }
             }
@@ -93,12 +93,12 @@ public class LudoTCPServer {
             return;
         }
 
-        // Loop principal do servidor para múltiplas partidas
+        
         while (true) {
-            // Iniciar nova partida
+            
             startNewGame();
             
-            // Após o jogo terminar, perguntar se querem jogar novamente
+            
             askForReplay();
             
             boolean allWantReplay = checkAllPlayersWantReplay();
@@ -110,7 +110,7 @@ public class LudoTCPServer {
             }
         }
 
-        // Fechar conexões
+        
         for (Socket client : clients) {
             try {
                 client.close();
@@ -126,7 +126,7 @@ public class LudoTCPServer {
     }
 
     private void startNewGame() {
-        // Resetar posições dos jogadores
+        
         for (int i = 0; i < NUM_PLAYERS; i++) {
             Arrays.fill(playerPositions[i], -1);
         }
@@ -181,14 +181,14 @@ public class LudoTCPServer {
     }
 
     private void askForReplay() {
-        // Resetar flags de replay ANTES de perguntar
+        
         for (int i = 0; i < NUM_PLAYERS; i++) {
             playersWantReplay.set(i, false);
         }
         
         broadcast("Deseja jogar novamente? Digite 'sim' para continuar ou 'nao' para sair:");
         
-        // Coletar respostas de todos os jogadores
+        
         for (int i = 0; i < NUM_PLAYERS; i++) {
             sendToClient(i, "Deseja jogar novamente? (sim/nao):");
             String response = receiveFromClient(i);
@@ -211,7 +211,7 @@ public class LudoTCPServer {
     }
 
     private void resetGame() {
-        // Resetar todas as posições
+        
         for (int i = 0; i < NUM_PLAYERS; i++) {
             Arrays.fill(playerPositions[i], -1);
         }
@@ -221,25 +221,25 @@ public class LudoTCPServer {
     private void movePiece(int player, int piece, int steps) {
         int currentPos = playerPositions[player][piece];
         
-        if (currentPos == -1) {  // Peça na base
+        if (currentPos == -1) {  
             if (steps == 5) {
-                playerPositions[player][piece] = 0;  // Sai para posição 0
+                playerPositions[player][piece] = 0;  
                 broadcast(playerNames.get(player) + " tirou uma peca da base");
             } else {
                 sendToClient(player, "Precisa de 5 para sair da base." + '\n');
                 return;
             }
         } 
-        else if (currentPos == TAMANHO_TABULEIRO - 1) {  // Já está no centro
+        else if (currentPos == TAMANHO_TABULEIRO - 1) {  
             sendToClient(player, "Esta peca ja chegou ao centro e não pode mais ser movida." + '\n');
             return;
         }
-        else {  // Peça no tabuleiro
+        else {  
             int newPos = currentPos + steps;
             
-            // Regra especial para chegar ao centro - precisa ser exato
+            
             if (newPos > TAMANHO_TABULEIRO - 1) {
-                // Calcular quantos passos faltam para chegar exatamente ao centro
+                
                 int stepsToCenter = (TAMANHO_TABULEIRO - 1) - currentPos;
                 
                 broadcast(playerNames.get(player) + " precisa de " + stepsToCenter + 
@@ -248,27 +248,27 @@ public class LudoTCPServer {
                 
                 sendToClient(player, "Para chegar ao centro precisa do numero exato " + 
                             stepsToCenter + ". Sua peca permanece na posicao " + currentPos + ".");
-                return;  // Não move a peça
+                return;  
             }
             
-            // Se chegou exatamente no centro
+            
             if (newPos == TAMANHO_TABULEIRO - 1) {
                 playerPositions[player][piece] = newPos;
                 broadcast(playerNames.get(player) + " levou uma peca ao centro!");
                 
-                // Verificar se ganhou
+                
                 if (isPlayerWinner(player)) {
                     broadcast(playerNames.get(player) + " COMPLETOU TODAS AS PECAS!");
                 }
                 return;
             }
             
-            // Verificar captura (apenas se não estiver no centro)
+            
             for (int p = 0; p < NUM_PLAYERS; p++) {
                 if (p != player) {
                     for (int pc = 0; pc < PEÇAS; pc++) {
                         if (playerPositions[p][pc] == newPos) {
-                            playerPositions[p][pc] = -1;  // Volta à base
+                            playerPositions[p][pc] = -1;  
                             broadcast("Peca de " + playerNames.get(p) + " foi CAPTURADA por " + playerNames.get(player));
                         }
                     }
@@ -277,7 +277,7 @@ public class LudoTCPServer {
             
             playerPositions[player][piece] = newPos;
             
-            // Informar quantos passos faltam para o centro
+            
             int remainingToCenter = (TAMANHO_TABULEIRO - 1) - newPos;
             if (remainingToCenter > 0) {
                 sendToClient(player, "Voce moveu para a posicao " + newPos + 
@@ -371,21 +371,21 @@ public class LudoTCPServer {
     }
 
     private boolean waitForAllPlayersToStart() {
-        // Resetar flags
+        
         for (int i = 0; i < NUM_PLAYERS; i++) {
             playersReady.set(i, false);
         }
 
         broadcast("Todos os jogadores devem confirmar o inicio da partida.");
-        // Enviar pedido de confirmacao a cada cliente
+        
         for (int i = 0; i < NUM_PLAYERS; i++) {
             sendToClient(i, "Deseja iniciar a partida? Digite 'sim' para confirmar ou 'nao' para sair:");
         }
 
-        // Receber respostas
+        
         for (int i = 0; i < NUM_PLAYERS; i++) {
             String response = receiveFromClient(i);
-            if (response == null) response = "";
+           if (response == null) response = "";
             if ("sim".equalsIgnoreCase(response) || "s".equalsIgnoreCase(response)) {
                 playersReady.set(i, true);
                 sendToClient(i, "Confirmacao recebida. Aguardando os outros jogadores...");
@@ -395,7 +395,7 @@ public class LudoTCPServer {
             }
         }
 
-        // Verificar se todos confirmaram
+        
         for (boolean ready : playersReady) {
             if (!ready) return false;
         }

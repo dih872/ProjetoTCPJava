@@ -11,7 +11,7 @@ public class LudoTCPClient {
         
         final DateTimeFormatter dtf = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss");
 
-        // Criar leitor do teclado
+        
         BufferedReader keyboardReader = new BufferedReader(new InputStreamReader(System.in));
 
         // Conectar ao servidor (usando localhost por padrão)
@@ -23,7 +23,7 @@ public class LudoTCPClient {
         Socket clientSocket = new Socket(serverAddress, serverPort);
         System.out.println("[" + dtf.format(LocalDateTime.now()) + "] Conexão estabelecida com sucesso!");
 
-        // Obter informações da conexão
+        
         String localAddress = clientSocket.getLocalAddress().getHostAddress();
         int localPort = clientSocket.getLocalPort();
         String remoteAddress = clientSocket.getInetAddress().getHostAddress();
@@ -32,18 +32,18 @@ public class LudoTCPClient {
         System.out.println("[" + dtf.format(LocalDateTime.now()) + "] Seu Endereço: " + localAddress + ":" + localPort);
         System.out.println("[" + dtf.format(LocalDateTime.now()) + "] Servidor: " + remoteAddress + ":" + remotePort);
 
-        // Criar objetos para enviar e receber dados
+        
         DataOutputStream outToServer = new DataOutputStream(clientSocket.getOutputStream());
         BufferedReader inFromServer = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
 
-        // Thread para receber mensagens do servidor
+        
         Thread receiverThread = new Thread(() -> {
             try {
                 String message;
                 while ((message = inFromServer.readLine()) != null) {
                     System.out.println("[" + dtf.format(LocalDateTime.now()) + "] " + message);
                     
-                    // Se for nossa vez ou precisar de resposta, mostrar prompt especial
+                    
                     if (message.contains("Seu turno") || 
                         message.contains("Digite 'roll'") || 
                         message.contains("Digite seu nome") || 
@@ -58,13 +58,12 @@ public class LudoTCPClient {
         });
         receiverThread.start();
 
-        // Loop principal para enviar comandos
+        
         String userInput;
         while ((userInput = keyboardReader.readLine()) != null) {
             outToServer.writeBytes(userInput + '\n');
         }
 
-        // Fechar conexão
         clientSocket.close();
         keyboardReader.close();
     }
