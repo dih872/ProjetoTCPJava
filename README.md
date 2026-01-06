@@ -64,7 +64,7 @@ Ludo TCP é uma implementação do jogo clássico Ludo desenvolvida em Java com 
 
 6. **Vitória:**
    - O primeiro a levar todas as quatro peças ao centro vence.
-   - Ao final, os jogadores são questionados se desejam jogar novamente.
+   - Ao final, os jogadores são perguntados  se desejam jogar novamente.
 
 ### Controles
 - `girar` - Rolar o dado
