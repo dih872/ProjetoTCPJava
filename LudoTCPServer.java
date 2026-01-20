@@ -14,7 +14,7 @@ public class LudoTCPServer {
 
     private static final DateTimeFormatter dtf = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss");
     private static final int SERVER_PORT = 6897;
-    private static final int NUM_PLAYERS = 3;
+    private static final int NumeroDeJogadores = 3;
     private static final int PEÇAS = 4;
     private static final int TAMANHO_TABULEIRO = 25;
 
@@ -22,7 +22,7 @@ public class LudoTCPServer {
     private List<String> playerNames = new ArrayList<>();
     private List<Boolean> playersWantReplay = new ArrayList<>();
     private List<Boolean> playersReady = new ArrayList<>();
-    private int[][] playerPositions = new int[NUM_PLAYERS][PEÇAS];
+    private int[][] posicaoJogador = new int[NumeroDeJogadores][PEÇAS];
     private int currentPlayer = 0;
     private Random random = new Random();
 
@@ -36,9 +36,9 @@ public class LudoTCPServer {
         System.out.println("[" + dtf.format(LocalDateTime.now()) + "] "
                 + "Servidor Ludo TCP rodando na porta " + SERVER_PORT);
         System.out.println("[" + dtf.format(LocalDateTime.now()) + "] "
-                + "Aguardando " + NUM_PLAYERS + " jogadores...");
+                + "Aguardando " + NumeroDeJogadores + " jogadores...");
 
-        while (clients.size() < NUM_PLAYERS) {
+        while (clients.size() < NumeroDeJogadores) {
             System.out.println("[" + dtf.format(LocalDateTime.now()) + "] "
                     + "Aguardando nova conexao de jogadores...");
             Socket connectionSocket = welcomeSocket.accept();
@@ -72,7 +72,7 @@ public class LudoTCPServer {
             outToClient.writeBytes("Conexao estabelecida com sucesso" + '\n');
             outToClient.writeBytes("Voce esta conectado como: " + playerName + '\n');
 
-            int remainingPlayers = NUM_PLAYERS - clients.size();
+            int remainingPlayers = NumeroDeJogadores - clients.size();
             if (remainingPlayers > 0) {
                 outToClient.writeBytes("Faltam " + remainingPlayers + " jogadores para comecar." + '\n');
             } else {
@@ -127,8 +127,8 @@ public class LudoTCPServer {
 
     private void startNewGame() {
         
-        for (int i = 0; i < NUM_PLAYERS; i++) {
-            Arrays.fill(playerPositions[i], -1);
+        for (int i = 0; i < NumeroDeJogadores; i++) {
+            Arrays.fill(posicaoJogador[i], -1);
         }
         currentPlayer = 0;
         
@@ -166,7 +166,7 @@ public class LudoTCPServer {
                 }
 
                 if (girar != 6) {
-                    currentPlayer = (currentPlayer + 1) % NUM_PLAYERS;
+                    currentPlayer = (currentPlayer + 1) % NumeroDeJogadores;
                 }
             } else {
                 sendToClient(currentPlayer, "Comando invalido. Digite 'girar'." + '\n');
@@ -182,14 +182,14 @@ public class LudoTCPServer {
 
     private void askForReplay() {
         
-        for (int i = 0; i < NUM_PLAYERS; i++) {
+        for (int i = 0; i < NumeroDeJogadores; i++) {
             playersWantReplay.set(i, false);
         }
         
         broadcast("Deseja jogar novamente? Digite 'sim' para continuar ou 'nao' para sair:");
         
         
-        for (int i = 0; i < NUM_PLAYERS; i++) {
+        for (int i = 0; i < NumeroDeJogadores; i++) {
             sendToClient(i, "Deseja jogar novamente? (sim/nao):");
             String response = receiveFromClient(i);
             
@@ -212,18 +212,18 @@ public class LudoTCPServer {
 
     private void resetGame() {
         
-        for (int i = 0; i < NUM_PLAYERS; i++) {
-            Arrays.fill(playerPositions[i], -1);
+        for (int i = 0; i < NumeroDeJogadores; i++) {
+            Arrays.fill(posicaoJogador[i], -1);
         }
         currentPlayer = 0;
     }
 
     private void movePiece(int player, int piece, int steps) {
-        int currentPos = playerPositions[player][piece];
+        int currentPos = posicaoJogador[player][piece];
         
         if (currentPos == -1) {  
             if (steps == 5) {
-                playerPositions[player][piece] = 0;  
+                posicaoJogador[player][piece] = 0;  
                 broadcast(playerNames.get(player) + " tirou uma peca da base");
             } else {
                 sendToClient(player, "Precisa de 5 para sair da base." + '\n');
@@ -253,7 +253,7 @@ public class LudoTCPServer {
             
             
             if (newPos == TAMANHO_TABULEIRO - 1) {
-                playerPositions[player][piece] = newPos;
+                posicaoJogador[player][piece] = newPos;
                 broadcast(playerNames.get(player) + " levou uma peca ao centro!");
                 
                 
@@ -264,18 +264,18 @@ public class LudoTCPServer {
             }
             
             
-            for (int p = 0; p < NUM_PLAYERS; p++) {
+            for (int p = 0; p < NumeroDeJogadores; p++) {
                 if (p != player) {
                     for (int pc = 0; pc < PEÇAS; pc++) {
-                        if (playerPositions[p][pc] == newPos) {
-                            playerPositions[p][pc] = -1;  
+                        if (posicaoJogador[p][pc] == newPos) {
+                            posicaoJogador[p][pc] = -1;  
                             broadcast("Peca de " + playerNames.get(p) + " foi CAPTURADA por " + playerNames.get(player));
                         }
                     }
                 }
             }
             
-            playerPositions[player][piece] = newPos;
+            posicaoJogador[player][piece] = newPos;
             
             
             int remainingToCenter = (TAMANHO_TABULEIRO - 1) - newPos;
@@ -288,7 +288,7 @@ public class LudoTCPServer {
     
     private boolean isPlayerWinner(int player) {
         int count = 0;
-        for (int pos : playerPositions[player]) {
+        for (int pos : posicaoJogador[player]) {
             if (pos == TAMANHO_TABULEIRO - 1) count++;
         }
         return count == PEÇAS;
@@ -329,10 +329,10 @@ public class LudoTCPServer {
 
     private String getBoardState() {
         StringBuilder sb = new StringBuilder("\n=== ESTADO DO TABULEIRO ===\n");
-        for (int p = 0; p < NUM_PLAYERS; p++) {
+        for (int p = 0; p < NumeroDeJogadores; p++) {
             sb.append(playerNames.get(p)).append(": ");
             for (int i = 0; i < PEÇAS; i++) {
-                int pos = playerPositions[p][i];
+                int pos = posicaoJogador[p][i];
                 if (pos == -1) {
                     sb.append("[BASE]");
                 } else if (pos == TAMANHO_TABULEIRO - 1) {
@@ -349,9 +349,9 @@ public class LudoTCPServer {
     }
 
     private boolean isGameOver() {
-        for (int p = 0; p < NUM_PLAYERS; p++) {
+        for (int p = 0; p < NumeroDeJogadores; p++) {
             int count = 0;
-            for (int pos : playerPositions[p]) {
+            for (int pos : posicaoJogador[p]) {
                 if (pos == TAMANHO_TABULEIRO - 1) count++;
             }
             if (count == PEÇAS) return true;
@@ -360,9 +360,9 @@ public class LudoTCPServer {
     }
 
     private int getWinner() {
-        for (int p = 0; p < NUM_PLAYERS; p++) {
+        for (int p = 0; p < NumeroDeJogadores; p++) {
             int count = 0;
-            for (int pos : playerPositions[p]) {
+            for (int pos : posicaoJogador[p]) {
                 if (pos == TAMANHO_TABULEIRO - 1) count++;
             }
             if (count == PEÇAS) return p;
@@ -372,18 +372,18 @@ public class LudoTCPServer {
 
     private boolean waitForAllPlayersToStart() {
         
-        for (int i = 0; i < NUM_PLAYERS; i++) {
+        for (int i = 0; i < NumeroDeJogadores; i++) {
             playersReady.set(i, false);
         }
 
         broadcast("Todos os jogadores devem confirmar o inicio da partida.");
         
-        for (int i = 0; i < NUM_PLAYERS; i++) {
+        for (int i = 0; i < NumeroDeJogadores; i++) {
             sendToClient(i, "Deseja iniciar a partida? Digite 'sim' para confirmar ou 'nao' para sair:");
         }
 
         
-        for (int i = 0; i < NUM_PLAYERS; i++) {
+        for (int i = 0; i < NumeroDeJogadores; i++) {
             String response = receiveFromClient(i);
            if (response == null) response = "";
             if ("sim".equalsIgnoreCase(response) || "s".equalsIgnoreCase(response)) {

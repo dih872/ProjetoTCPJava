@@ -14,8 +14,8 @@ public class LudoTCPClient {
         
         BufferedReader keyboardReader = new BufferedReader(new InputStreamReader(System.in));
 
-        // Conectar ao servidor (usando localhost por padrão)
-        String serverAddress = "localhost"; // faz conexão automatica  com o  localhost
+        
+        String serverAddress = "localhost"; 
         int serverPort = 6897;
         
         System.out.println("[" + dtf.format(LocalDateTime.now()) + "] Conectando ao servidor Ludo em " + serverAddress + ":" + serverPort + "...");
