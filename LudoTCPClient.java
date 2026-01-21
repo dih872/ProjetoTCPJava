@@ -12,43 +12,43 @@ public class LudoTCPClient {
         final DateTimeFormatter dtf = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss");
 
         
-        BufferedReader keyboardReader = new BufferedReader(new InputStreamReader(System.in));
+        BufferedReader leitorTeclado = new BufferedReader(new InputStreamReader(System.in));
 
         
-        String serverAddress = "localhost"; 
-        int serverPort = 6897;
+        String enderecoServidor = "localhost"; 
+        int portaServidor = 6897;
         
-        System.out.println("[" + dtf.format(LocalDateTime.now()) + "] Conectando ao servidor Ludo em " + serverAddress + ":" + serverPort + "...");
+        System.out.println("[" + dtf.format(LocalDateTime.now()) + "] Conectando ao servidor Ludo em " + enderecoServidor + ":" + portaServidor + "...");
         
-        Socket clientSocket = new Socket(serverAddress, serverPort);
+        Socket clienteSocket = new Socket(enderecoServidor, portaServidor);
         System.out.println("[" + dtf.format(LocalDateTime.now()) + "] Conexão estabelecida com sucesso!");
 
         
-        String localAddress = clientSocket.getLocalAddress().getHostAddress();
-        int localPort = clientSocket.getLocalPort();
-        String remoteAddress = clientSocket.getInetAddress().getHostAddress();
-        int remotePort = clientSocket.getPort();
+        String enderecoLocal = clienteSocket.getLocalAddress().getHostAddress();
+        int portaLocal = clienteSocket.getLocalPort();
+        String enderecoRemoto = clienteSocket.getInetAddress().getHostAddress();
+        int portaRemota = clienteSocket.getPort();
         
-        System.out.println("[" + dtf.format(LocalDateTime.now()) + "] Seu Endereço: " + localAddress + ":" + localPort);
-        System.out.println("[" + dtf.format(LocalDateTime.now()) + "] Servidor: " + remoteAddress + ":" + remotePort);
+        System.out.println("[" + dtf.format(LocalDateTime.now()) + "] Seu Endereço: " + enderecoLocal + ":" + portaLocal);
+        System.out.println("[" + dtf.format(LocalDateTime.now()) + "] Servidor: " + enderecoRemoto + ":" + portaRemota);
 
         
-        DataOutputStream outToServer = new DataOutputStream(clientSocket.getOutputStream());
-        BufferedReader inFromServer = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
+        DataOutputStream saidaParaServidor = new DataOutputStream(clienteSocket.getOutputStream());
+        BufferedReader entradaDoServidor = new BufferedReader(new InputStreamReader(clienteSocket.getInputStream()));
 
         
-        Thread receiverThread = new Thread(() -> {
+        Thread threadReceptora = new Thread(() -> {
             try {
-                String message;
-                while ((message = inFromServer.readLine()) != null) {
-                    System.out.println("[" + dtf.format(LocalDateTime.now()) + "] " + message);
+                String mensagem;
+                while ((mensagem = entradaDoServidor.readLine()) != null) {
+                    System.out.println("[" + dtf.format(LocalDateTime.now()) + "] " + mensagem);
                     
                     
-                    if (message.contains("Seu turno") || 
-                        message.contains("Digite 'roll'") || 
-                        message.contains("Digite seu nome") || 
-                        message.contains("Escolha uma peça") ||
-                        message.contains("Deseja jogar novamente")) {
+                    if (mensagem.contains("Seu turno") || 
+                        mensagem.contains("Digite 'girar'") || 
+                        mensagem.contains("Digite seu nome") || 
+                        mensagem.contains("Escolha uma peça") ||
+                        mensagem.contains("Deseja jogar novamente")) {
                         System.out.print(">> ");
                     }
                 }
@@ -56,15 +56,15 @@ public class LudoTCPClient {
                 System.out.println("[" + dtf.format(LocalDateTime.now()) + "] Conexao encerrada.");
             }
         });
-        receiverThread.start();
+        threadReceptora.start();
 
         
-        String userInput;
-        while ((userInput = keyboardReader.readLine()) != null) {
-            outToServer.writeBytes(userInput + '\n');
+        String entradaUsuario;
+        while ((entradaUsuario = leitorTeclado.readLine()) != null) {
+            saidaParaServidor.writeBytes(entradaUsuario + '\n');
         }
 
-        clientSocket.close();
-        keyboardReader.close();
+        clienteSocket.close();
+        leitorTeclado.close();
     }
 }

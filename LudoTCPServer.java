@@ -13,82 +13,82 @@ import java.util.Random;
 public class LudoTCPServer {
 
     private static final DateTimeFormatter dtf = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss");
-    private static final int SERVER_PORT = 6897;
-    private static final int NumeroDeJogadores = 3;
-    private static final int PEÇAS = 4;
+    private static final int PORTA_SERVIDOR = 6897;
+    private static final int NUMERO_DE_JOGADORES = 3;
+    private static final int NUMERO_PECAS = 4;
     private static final int TAMANHO_TABULEIRO = 25;
 
-    private List<Socket> clients = new ArrayList<>();
-    private List<String> playerNames = new ArrayList<>();
-    private List<Boolean> playersWantReplay = new ArrayList<>();
-    private List<Boolean> playersReady = new ArrayList<>();
-    private int[][] posicaoJogador = new int[NumeroDeJogadores][PEÇAS];
-    private int currentPlayer = 0;
-    private Random random = new Random();
+    private List<Socket> clientes = new ArrayList<>();
+    private List<String> nomesJogadores = new ArrayList<>();
+    private List<Boolean> jogadoresQueremReiniciar = new ArrayList<>();
+    private List<Boolean> jogadoresProntos = new ArrayList<>();
+    private int[][] posicaoJogador = new int[NUMERO_DE_JOGADORES][NUMERO_PECAS];
+    private int jogadorAtual = 0;
+    private Random aleatorio = new Random();
 
     public static void main(String argv[]) throws Exception {
-        new LudoTCPServer().start();
+        new LudoTCPServer().iniciar();
     }
 
-    public void start() throws Exception {
+    public void iniciar() throws Exception {
         
-        ServerSocket welcomeSocket = new ServerSocket(SERVER_PORT);
+        ServerSocket socketBemVindo = new ServerSocket(PORTA_SERVIDOR);
         System.out.println("[" + dtf.format(LocalDateTime.now()) + "] "
-                + "Servidor Ludo TCP rodando na porta " + SERVER_PORT);
+                + "Servidor Ludo TCP rodando na porta " + PORTA_SERVIDOR);
         System.out.println("[" + dtf.format(LocalDateTime.now()) + "] "
-                + "Aguardando " + NumeroDeJogadores + " jogadores...");
+                + "Aguardando " + NUMERO_DE_JOGADORES + " jogadores...");
 
-        while (clients.size() < NumeroDeJogadores) {
+        while (clientes.size() < NUMERO_DE_JOGADORES) {
             System.out.println("[" + dtf.format(LocalDateTime.now()) + "] "
                     + "Aguardando nova conexao de jogadores...");
-            Socket connectionSocket = welcomeSocket.accept();
+            Socket socketConexao = socketBemVindo.accept();
 
-            String remoteAddress = connectionSocket.getInetAddress().getHostAddress();
-            int remotePort = connectionSocket.getPort();
-            String localAddress = connectionSocket.getLocalAddress().getHostAddress();
-            int localPort = connectionSocket.getLocalPort();
+            String enderecoRemoto = socketConexao.getInetAddress().getHostAddress();
+            int portaRemota = socketConexao.getPort();
+            String enderecoLocal = socketConexao.getLocalAddress().getHostAddress();
+            int portaLocal = socketConexao.getLocalPort();
             
             System.out.println("[" + dtf.format(LocalDateTime.now()) + "] "
                     + "Cliente TCP conectado:");
             System.out.println("[" + dtf.format(LocalDateTime.now()) + "] "
-                    + "  Endereco do Cliente: " + remoteAddress + ":" + remotePort);
+                    + "  Endereco do Cliente: " + enderecoRemoto + ":" + portaRemota);
             System.out.println("[" + dtf.format(LocalDateTime.now()) + "] "
-                    + "  Endereco do Servidor: " + localAddress + ":" + localPort);
+                    + "  Endereco do Servidor: " + enderecoLocal + ":" + portaLocal);
 
-            clients.add(connectionSocket);
-            playersWantReplay.add(false);
-            playersReady.add(false);
+            clientes.add(socketConexao);
+            jogadoresQueremReiniciar.add(false);
+            jogadoresProntos.add(false);
 
-            BufferedReader inFromClient = new BufferedReader(new InputStreamReader(connectionSocket.getInputStream()));
-            DataOutputStream outToClient = new DataOutputStream(connectionSocket.getOutputStream());
+            BufferedReader entradaDoCliente = new BufferedReader(new InputStreamReader(socketConexao.getInputStream()));
+            DataOutputStream saidaParaCliente = new DataOutputStream(socketConexao.getOutputStream());
 
-            outToClient.writeBytes("Digite seu nome: " + '\n');
-            String playerName = inFromClient.readLine();
-            playerNames.add(playerName);
+            saidaParaCliente.writeBytes("Digite seu nome: " + '\n');
+            String nomeJogador = entradaDoCliente.readLine();
+            nomesJogadores.add(nomeJogador);
 
             System.out.println("[" + dtf.format(LocalDateTime.now()) + "] "
-                    + "Jogador registrado: " + playerName + " (" + remoteAddress + ":" + remotePort + ")");
+                    + "Jogador registrado: " + nomeJogador + " (" + enderecoRemoto + ":" + portaRemota + ")");
             
-            outToClient.writeBytes("Conexao estabelecida com sucesso" + '\n');
-            outToClient.writeBytes("Voce esta conectado como: " + playerName + '\n');
+            saidaParaCliente.writeBytes("Conexao estabelecida com sucesso" + '\n');
+            saidaParaCliente.writeBytes("Voce esta conectado como: " + nomeJogador + '\n');
 
-            int remainingPlayers = NumeroDeJogadores - clients.size();
-            if (remainingPlayers > 0) {
-                outToClient.writeBytes("Faltam " + remainingPlayers + " jogadores para comecar." + '\n');
+            int jogadoresRestantes = NUMERO_DE_JOGADORES - clientes.size();
+            if (jogadoresRestantes > 0) {
+                saidaParaCliente.writeBytes("Faltam " + jogadoresRestantes + " jogadores para comecar." + '\n');
             } else {
-                outToClient.writeBytes("Todos os jogadores conectados O jogo comecara em instantes..." + '\n');
+                saidaParaCliente.writeBytes("Todos os jogadores conectados O jogo comecara em instantes..." + '\n');
             }
         }
 
         
-        boolean allConfirmed = waitForAllPlayersToStart();
-        if (!allConfirmed) {
-            broadcast("Nem todos os jogadores confirmaram o inicio. Encerrando servidor...");
+        boolean todosConfirmaram = aguardarTodosJogadoresIniciar();
+        if (!todosConfirmaram) {
+            transmitirParaTodos("Nem todos os jogadores confirmaram o inicio. Encerrando servidor...");
             
-            for (Socket client : clients) {
-                try { client.close(); } catch (Exception e) { }
+            for (Socket cliente : clientes) {
+                try { cliente.close(); } catch (Exception e) { }
             }
-            welcomeSocket.close();
+            socketBemVindo.close();
             System.out.println("[" + dtf.format(LocalDateTime.now()) + "] Servidor encerrado por falta de confirmacao dos jogadores.");
             return;
         }
@@ -96,310 +96,310 @@ public class LudoTCPServer {
         
         while (true) {
             
-            startNewGame();
+            iniciarNovoJogo();
             
             
-            askForReplay();
+            perguntarReiniciar();
             
-            boolean allWantReplay = checkAllPlayersWantReplay();
-            if (!allWantReplay) {
-                broadcast("Alguns jogadores não querem jogar novamente. Encerrando...");
+            boolean todosQueremReiniciar = verificarTodosJogadoresQueremReiniciar();
+            if (!todosQueremReiniciar) {
+                transmitirParaTodos("Alguns jogadores não querem jogar novamente. Encerrando...");
                 break;
             } else {
-                broadcast("Iniciando nova partida...");
+                transmitirParaTodos("Iniciando nova partida...");
             }
         }
 
         
-        for (Socket client : clients) {
+        for (Socket cliente : clientes) {
             try {
-                client.close();
+                cliente.close();
             } catch (Exception e) {
                 System.out.println("[" + dtf.format(LocalDateTime.now()) + "] "
                         + "Erro ao fechar conexão com cliente");
             }
         }
         
-        welcomeSocket.close();
+        socketBemVindo.close();
         System.out.println("[" + dtf.format(LocalDateTime.now()) + "] "
                 + "Servidor encerrado.");
     }
 
-    private void startNewGame() {
+    private void iniciarNovoJogo() {
         
-        for (int i = 0; i < NumeroDeJogadores; i++) {
+        for (int i = 0; i < NUMERO_DE_JOGADORES; i++) {
             Arrays.fill(posicaoJogador[i], -1);
         }
-        currentPlayer = 0;
+        jogadorAtual = 0;
         
-        broadcast("Jogo iniciado! Jogadores: " + String.join(", ", playerNames));
-        broadcast(getBoardState());
-        playGame();
+        transmitirParaTodos("Jogo iniciado! Jogadores: " + String.join(", ", nomesJogadores));
+        transmitirParaTodos(obterEstadoTabuleiro());
+        jogar();
     }
 
-    private void playGame() {
-        while (!isGameOver()) {
-            String currentName = playerNames.get(currentPlayer);
-            broadcast("Turno de " + currentName + ". Rolar dado...");
-            sendToClient(currentPlayer, "Seu turno. Digite 'girar' para rolar o dado.");
+    private void jogar() {
+        while (!jogoTerminou()) {
+            String nomeAtual = nomesJogadores.get(jogadorAtual);
+            transmitirParaTodos("Turno de " + nomeAtual + ". Rolar dado...");
+            enviarParaCliente(jogadorAtual, "Seu turno. Digite 'girar' para rolar o dado.");
 
-            String command = receiveFromClient(currentPlayer);
+            String comando = receberDoCliente(jogadorAtual);
             
-            if ("girar".equalsIgnoreCase(command)) {
-                int girar = random.nextInt(6) + 1;
-                broadcast(currentName + " rolou " + girar + ".");
-                sendToClient(currentPlayer, "Voce rolou " + girar + ". Escolha uma peca para mover (0-3) ou 'skip' se nao puder.");
+            if ("girar".equalsIgnoreCase(comando)) {
+                int girar = aleatorio.nextInt(6) + 1;
+                transmitirParaTodos(nomeAtual + " rolou " + girar + ".");
+                enviarParaCliente(jogadorAtual, "Voce rolou " + girar + ". Escolha uma peca para mover (0-3) ou 'skip' se nao puder.");
 
-                String moveCommand = receiveFromClient(currentPlayer);
+                String comandoMover = receberDoCliente(jogadorAtual);
                 
-                if (!"skip".equalsIgnoreCase(moveCommand)) {
+                if (!"skip".equalsIgnoreCase(comandoMover)) {
                     try {
-                        int pieceIndex = Integer.parseInt(moveCommand);
-                        if (pieceIndex >= 0 && pieceIndex < PEÇAS) {
-                            movePiece(currentPlayer, pieceIndex, girar);
+                        int indicePeca = Integer.parseInt(comandoMover);
+                        if (indicePeca >= 0 && indicePeca < NUMERO_PECAS) {
+                            moverPeca(jogadorAtual, indicePeca, girar);
                         } else {
-                            sendToClient(currentPlayer, "Peca invalida." + '\n');
+                            enviarParaCliente(jogadorAtual, "Peca invalida." + '\n');
                         }
                     } catch (NumberFormatException e) {
-                        sendToClient(currentPlayer, "Comando invalido." + '\n');
+                        enviarParaCliente(jogadorAtual, "Comando invalido." + '\n');
                     }
                 }
 
                 if (girar != 6) {
-                    currentPlayer = (currentPlayer + 1) % NumeroDeJogadores;
+                    jogadorAtual = (jogadorAtual + 1) % NUMERO_DE_JOGADORES;
                 }
             } else {
-                sendToClient(currentPlayer, "Comando invalido. Digite 'girar'." + '\n');
+                enviarParaCliente(jogadorAtual, "Comando invalido. Digite 'girar'." + '\n');
             }
 
-            broadcast(getBoardState());
+            transmitirParaTodos(obterEstadoTabuleiro());
         }
 
-        int winner = getWinner();
-        broadcast("=== JOGO TERMINADO! ===");
-        broadcast("VENCEDOR: " + playerNames.get(winner));
+        int vencedor = obterVencedor();
+        transmitirParaTodos("=== JOGO TERMINADO! ===");
+        transmitirParaTodos("VENCEDOR: " + nomesJogadores.get(vencedor));
     }
 
-    private void askForReplay() {
+    private void perguntarReiniciar() {
         
-        for (int i = 0; i < NumeroDeJogadores; i++) {
-            playersWantReplay.set(i, false);
+        for (int i = 0; i < NUMERO_DE_JOGADORES; i++) {
+            jogadoresQueremReiniciar.set(i, false);
         }
         
-        broadcast("Deseja jogar novamente? Digite 'sim' para continuar ou 'nao' para sair:");
+        transmitirParaTodos("Deseja jogar novamente? Digite 'sim' para continuar ou 'nao' para sair:");
         
         
-        for (int i = 0; i < NumeroDeJogadores; i++) {
-            sendToClient(i, "Deseja jogar novamente? (sim/nao):");
-            String response = receiveFromClient(i);
+        for (int i = 0; i < NUMERO_DE_JOGADORES; i++) {
+            enviarParaCliente(i, "Deseja jogar novamente? (sim/nao):");
+            String resposta = receberDoCliente(i);
             
-            if ("sim".equalsIgnoreCase(response) || "s".equalsIgnoreCase(response)) {
-                playersWantReplay.set(i, true);
+            if ("sim".equalsIgnoreCase(resposta) || "s".equalsIgnoreCase(resposta)) {
+                jogadoresQueremReiniciar.set(i, true);
             } else {
-                playersWantReplay.set(i, false);
+                jogadoresQueremReiniciar.set(i, false);
             }
         }
     }
 
-    private boolean checkAllPlayersWantReplay() {
-        for (boolean wantsReplay : playersWantReplay) {
-            if (!wantsReplay) {
+    private boolean verificarTodosJogadoresQueremReiniciar() {
+        for (boolean querReiniciar : jogadoresQueremReiniciar) {
+            if (!querReiniciar) {
                 return false;
             }
         }
         return true;
     }
 
-    private void resetGame() {
+    private void reiniciarJogo() {
         
-        for (int i = 0; i < NumeroDeJogadores; i++) {
+        for (int i = 0; i < NUMERO_DE_JOGADORES; i++) {
             Arrays.fill(posicaoJogador[i], -1);
         }
-        currentPlayer = 0;
+        jogadorAtual = 0;
     }
 
-    private void movePiece(int player, int piece, int steps) {
-        int currentPos = posicaoJogador[player][piece];
+    private void moverPeca(int jogador, int peca, int passos) {
+        int posicaoAtual = posicaoJogador[jogador][peca];
         
-        if (currentPos == -1) {  
-            if (steps == 5) {
-                posicaoJogador[player][piece] = 0;  
-                broadcast(playerNames.get(player) + " tirou uma peca da base");
+        if (posicaoAtual == -1) {  
+            if (passos == 5) {
+                posicaoJogador[jogador][peca] = 0;  
+                transmitirParaTodos(nomesJogadores.get(jogador) + " tirou uma peca da base");
             } else {
-                sendToClient(player, "Precisa de 5 para sair da base." + '\n');
+                enviarParaCliente(jogador, "Precisa de 5 para sair da base." + '\n');
                 return;
             }
         } 
-        else if (currentPos == TAMANHO_TABULEIRO - 1) {  
-            sendToClient(player, "Esta peca ja chegou ao centro e não pode mais ser movida." + '\n');
+        else if (posicaoAtual == TAMANHO_TABULEIRO - 1) {  
+            enviarParaCliente(jogador, "Esta peca ja chegou ao centro e não pode mais ser movida." + '\n');
             return;
         }
         else {  
-            int newPos = currentPos + steps;
+            int novaPosicao = posicaoAtual + passos;
             
             
-            if (newPos > TAMANHO_TABULEIRO - 1) {
+            if (novaPosicao > TAMANHO_TABULEIRO - 1) {
                 
-                int stepsToCenter = (TAMANHO_TABULEIRO - 1) - currentPos;
+                int passosParaCentro = (TAMANHO_TABULEIRO - 1) - posicaoAtual;
                 
-                broadcast(playerNames.get(player) + " precisa de " + stepsToCenter + 
-                         " para chegar exatamente ao centro! (rolou " + steps + ") " +
-                         "A peca permanece na posicao " + currentPos + ".");
+                transmitirParaTodos(nomesJogadores.get(jogador) + " precisa de " + passosParaCentro + 
+                         " para chegar exatamente ao centro! (rolou " + passos + ") " +
+                         "A peca permanece na posicao " + posicaoAtual + ".");
                 
-                sendToClient(player, "Para chegar ao centro precisa do numero exato " + 
-                            stepsToCenter + ". Sua peca permanece na posicao " + currentPos + ".");
+                enviarParaCliente(jogador, "Para chegar ao centro precisa do numero exato " + 
+                            passosParaCentro + ". Sua peca permanece na posicao " + posicaoAtual + ".");
                 return;  
             }
             
             
-            if (newPos == TAMANHO_TABULEIRO - 1) {
-                posicaoJogador[player][piece] = newPos;
-                broadcast(playerNames.get(player) + " levou uma peca ao centro!");
+            if (novaPosicao == TAMANHO_TABULEIRO - 1) {
+                posicaoJogador[jogador][peca] = novaPosicao;
+                transmitirParaTodos(nomesJogadores.get(jogador) + " levou uma peca ao centro!");
                 
                 
-                if (isPlayerWinner(player)) {
-                    broadcast(playerNames.get(player) + " COMPLETOU TODAS AS PECAS!");
+                if (jogadorVenceu(jogador)) {
+                    transmitirParaTodos(nomesJogadores.get(jogador) + " COMPLETOU TODAS AS PECAS!");
                 }
                 return;
             }
             
             
-            for (int p = 0; p < NumeroDeJogadores; p++) {
-                if (p != player) {
-                    for (int pc = 0; pc < PEÇAS; pc++) {
-                        if (posicaoJogador[p][pc] == newPos) {
+            for (int p = 0; p < NUMERO_DE_JOGADORES; p++) {
+                if (p != jogador) {
+                    for (int pc = 0; pc < NUMERO_PECAS; pc++) {
+                        if (posicaoJogador[p][pc] == novaPosicao) {
                             posicaoJogador[p][pc] = -1;  
-                            broadcast("Peca de " + playerNames.get(p) + " foi CAPTURADA por " + playerNames.get(player));
+                            transmitirParaTodos("Peca de " + nomesJogadores.get(p) + " foi CAPTURADA por " + nomesJogadores.get(jogador));
                         }
                     }
                 }
             }
             
-            posicaoJogador[player][piece] = newPos;
+            posicaoJogador[jogador][peca] = novaPosicao;
             
             
-            int remainingToCenter = (TAMANHO_TABULEIRO - 1) - newPos;
-            if (remainingToCenter > 0) {
-                sendToClient(player, "Voce moveu para a posicao " + newPos + 
-                            ". Faltam " + remainingToCenter + " passos para chegar ao centro.");
+            int restanteParaCentro = (TAMANHO_TABULEIRO - 1) - novaPosicao;
+            if (restanteParaCentro > 0) {
+                enviarParaCliente(jogador, "Voce moveu para a posicao " + novaPosicao + 
+                            ". Faltam " + restanteParaCentro + " passos para chegar ao centro.");
             }
         }
     }
     
-    private boolean isPlayerWinner(int player) {
-        int count = 0;
-        for (int pos : posicaoJogador[player]) {
-            if (pos == TAMANHO_TABULEIRO - 1) count++;
+    private boolean jogadorVenceu(int jogador) {
+        int contador = 0;
+        for (int pos : posicaoJogador[jogador]) {
+            if (pos == TAMANHO_TABULEIRO - 1) contador++;
         }
-        return count == PEÇAS;
+        return contador == NUMERO_PECAS;
     }
 
-    private void broadcast(String message) {
-        for (int i = 0; i < clients.size(); i++) {
+    private void transmitirParaTodos(String mensagem) {
+        for (int i = 0; i < clientes.size(); i++) {
             try {
-                DataOutputStream outToClient = new DataOutputStream(clients.get(i).getOutputStream());
-                outToClient.writeBytes(message + '\n');
+                DataOutputStream saidaParaCliente = new DataOutputStream(clientes.get(i).getOutputStream());
+                saidaParaCliente.writeBytes(mensagem + '\n');
             } catch (Exception e) {
                 System.out.println("[" + dtf.format(LocalDateTime.now()) + "] "
-                        + "Erro ao enviar para jogador " + playerNames.get(i));
+                        + "Erro ao enviar para jogador " + nomesJogadores.get(i));
             }
         }
     }
 
-    private void sendToClient(int playerIndex, String message) {
+    private void enviarParaCliente(int indiceJogador, String mensagem) {
         try {
-            DataOutputStream outToClient = new DataOutputStream(clients.get(playerIndex).getOutputStream());
-            outToClient.writeBytes(message + '\n');
+            DataOutputStream saidaParaCliente = new DataOutputStream(clientes.get(indiceJogador).getOutputStream());
+            saidaParaCliente.writeBytes(mensagem + '\n');
         } catch (Exception e) {
             System.out.println("[" + dtf.format(LocalDateTime.now()) + "] "
-                    + "Erro ao enviar para jogador " + playerNames.get(playerIndex));
+                    + "Erro ao enviar para jogador " + nomesJogadores.get(indiceJogador));
         }
     }
 
-    private String receiveFromClient(int playerIndex) {
+    private String receberDoCliente(int indiceJogador) {
         try {
-            BufferedReader inFromClient = new BufferedReader(new InputStreamReader(clients.get(playerIndex).getInputStream()));
-            return inFromClient.readLine();
+            BufferedReader entradaDoCliente = new BufferedReader(new InputStreamReader(clientes.get(indiceJogador).getInputStream()));
+            return entradaDoCliente.readLine();
         } catch (Exception e) {
             System.out.println("[" + dtf.format(LocalDateTime.now()) + "] "
-                    + "Erro ao receber do jogador " + playerNames.get(playerIndex));
+                    + "Erro ao receber do jogador " + nomesJogadores.get(indiceJogador));
         }
         return "";
     }
 
-    private String getBoardState() {
-        StringBuilder sb = new StringBuilder("\n=== ESTADO DO TABULEIRO ===\n");
-        for (int p = 0; p < NumeroDeJogadores; p++) {
-            sb.append(playerNames.get(p)).append(": ");
-            for (int i = 0; i < PEÇAS; i++) {
+    private String obterEstadoTabuleiro() {
+        StringBuilder construtor = new StringBuilder("\n=== ESTADO DO TABULEIRO ===\n");
+        for (int p = 0; p < NUMERO_DE_JOGADORES; p++) {
+            construtor.append(nomesJogadores.get(p)).append(": ");
+            for (int i = 0; i < NUMERO_PECAS; i++) {
                 int pos = posicaoJogador[p][i];
                 if (pos == -1) {
-                    sb.append("[BASE]");
+                    construtor.append("[BASE]");
                 } else if (pos == TAMANHO_TABULEIRO - 1) {
-                    sb.append("[CENTRO]");
+                    construtor.append("[CENTRO]");
                 } else {
-                    sb.append("[").append(pos).append("]");
+                    construtor.append("[").append(pos).append("]");
                 }
-                sb.append(" ");
+                construtor.append(" ");
             }
-            sb.append("\n");
+            construtor.append("\n");
         }
-        sb.append("==========================\n");
-        return sb.toString();
+        construtor.append("==========================\n");
+        return construtor.toString();
     }
 
-    private boolean isGameOver() {
-        for (int p = 0; p < NumeroDeJogadores; p++) {
-            int count = 0;
+    private boolean jogoTerminou() {
+        for (int p = 0; p < NUMERO_DE_JOGADORES; p++) {
+            int contador = 0;
             for (int pos : posicaoJogador[p]) {
-                if (pos == TAMANHO_TABULEIRO - 1) count++;
+                if (pos == TAMANHO_TABULEIRO - 1) contador++;
             }
-            if (count == PEÇAS) return true;
+            if (contador == NUMERO_PECAS) return true;
         }
         return false;
     }
 
-    private int getWinner() {
-        for (int p = 0; p < NumeroDeJogadores; p++) {
-            int count = 0;
+    private int obterVencedor() {
+        for (int p = 0; p < NUMERO_DE_JOGADORES; p++) {
+            int contador = 0;
             for (int pos : posicaoJogador[p]) {
-                if (pos == TAMANHO_TABULEIRO - 1) count++;
+                if (pos == TAMANHO_TABULEIRO - 1) contador++;
             }
-            if (count == PEÇAS) return p;
+            if (contador == NUMERO_PECAS) return p;
         }
         return -1;
     }
 
-    private boolean waitForAllPlayersToStart() {
+    private boolean aguardarTodosJogadoresIniciar() {
         
-        for (int i = 0; i < NumeroDeJogadores; i++) {
-            playersReady.set(i, false);
+        for (int i = 0; i < NUMERO_DE_JOGADORES; i++) {
+            jogadoresProntos.set(i, false);
         }
 
-        broadcast("Todos os jogadores devem confirmar o inicio da partida.");
+        transmitirParaTodos("Todos os jogadores devem confirmar o inicio da partida.");
         
-        for (int i = 0; i < NumeroDeJogadores; i++) {
-            sendToClient(i, "Deseja iniciar a partida? Digite 'sim' para confirmar ou 'nao' para sair:");
+        for (int i = 0; i < NUMERO_DE_JOGADORES; i++) {
+            enviarParaCliente(i, "Deseja iniciar a partida? Digite 'sim' para confirmar ou 'nao' para sair:");
         }
 
         
-        for (int i = 0; i < NumeroDeJogadores; i++) {
-            String response = receiveFromClient(i);
-           if (response == null) response = "";
-            if ("sim".equalsIgnoreCase(response) || "s".equalsIgnoreCase(response)) {
-                playersReady.set(i, true);
-                sendToClient(i, "Confirmacao recebida. Aguardando os outros jogadores...");
+        for (int i = 0; i < NUMERO_DE_JOGADORES; i++) {
+            String resposta = receberDoCliente(i);
+           if (resposta == null) resposta = "";
+            if ("sim".equalsIgnoreCase(resposta) || "s".equalsIgnoreCase(resposta)) {
+                jogadoresProntos.set(i, true);
+                enviarParaCliente(i, "Confirmacao recebida. Aguardando os outros jogadores...");
             } else {
-                playersReady.set(i, false);
-                sendToClient(i, "Voce optou por nao iniciar. Conexao sera encerrada.");
+                jogadoresProntos.set(i, false);
+                enviarParaCliente(i, "Voce optou por nao iniciar. Conexao sera encerrada.");
             }
         }
 
         
-        for (boolean ready : playersReady) {
-            if (!ready) return false;
+        for (boolean pronto : jogadoresProntos) {
+            if (!pronto) return false;
         }
-        broadcast("Todos confirmaram. Iniciando a partida...");
+        transmitirParaTodos("Todos confirmaram. Iniciando a partida...");
         return true;
     }
 }
