@@ -33,7 +33,7 @@ Ludo TCP é uma implementação do jogo clássico Ludo desenvolvida em Java com 
    - Execute o arquivo LudoTCPServer.java.
    - O servidor aguardará três clientes se conectarem.
 
-2. **Inicie os clientes (em 3 terminais diferentes):**
+2. **Inicie os clientes (em  terminais diferentes):**
    - Abra o arquivo LudoTCPClient.java e execute-o.
    - Após cada cliente se conectar, digite seu nome.
    - Repita o processo três vezes para os três jogadores.
